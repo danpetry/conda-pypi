@@ -12,6 +12,7 @@ import json
 import os
 import sys
 import tempfile
+import shutil
 from importlib.metadata import PathDistribution
 from pathlib import Path
 from typing import Union, Optional
@@ -136,6 +137,7 @@ def build_conda(
     output_path: Path,
     python_executable,
     project_path: Optional[Path] = None,
+    test_dir: Optional[Path] = None,
     is_editable=False,
 ) -> Path:
     if not build_path.exists():
@@ -171,6 +173,9 @@ def build_conda(
         record_path = dist_info / "RECORD"
         # Rewrite RECORD for any changed files
         update_RECORD(record_path, site_packages, direct_url_path)
+
+    if test_dir:
+        shutil.copytree(test_dir, build_path / "info" / "test")
 
     # Write conda's paths after all other changes
     paths = paths_json(build_path)

@@ -101,6 +101,7 @@ pytest = "7.4.3.*"
 fmt = "!=10.2.0"
 pytest-mock = "3.12.0.*"
 pytest-xprocess = "*"
+conda-build = "*"
 # Build system dependencies
 conda-package-streaming = ">=0.11"
 unearth = ">=0.17.2"

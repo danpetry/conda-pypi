@@ -69,6 +69,13 @@ def configure_parser(parser: _SubParsersAction) -> None:
         action="store_true",
         help="Build PROJECT as an editable package.",
     )
+    convert.add_argument(
+        "-t",
+        "--test-dir",
+        type=Path,
+        required=False,
+        default=None,
+    )
 
 
 def execute(args: Namespace) -> int:
@@ -79,6 +86,9 @@ def execute(args: Namespace) -> int:
     if not Path(args.project_path).exists():
         raise ArgumentError("PROJECT must be a local path to a sdist, wheel or directory.")
     project_path = Path(args.project_path).expanduser()
+    test_dir = args.test_dir
+    if test_dir:
+        test_dir = Path(args.test_dir).expanduser()
     output_folder = Path(args.output_folder).expanduser()
     output_folder.mkdir(parents=True, exist_ok=True)
 
@@ -94,6 +104,7 @@ def execute(args: Namespace) -> int:
                 Path(build_path),
                 output_folder,
                 python_executable,
+                test_dir=test_dir,
             )
     else:
         # Build from source (project directory or sdist)
