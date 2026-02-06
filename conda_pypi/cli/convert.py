@@ -41,6 +41,10 @@ def configure_parser(parser: _SubParsersAction) -> None:
             git clone https://github.com/user/repo.git
             conda pypi convert ./repo
 
+        Convert a package and inject test files::
+
+            conda pypi convert --test-dir ./my-tests-dir ./my-python-project
+
         """
     )
 
