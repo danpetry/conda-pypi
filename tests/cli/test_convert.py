@@ -1,4 +1,5 @@
 import os
+import sys
 
 import pytest
 from conda.cli.main import main_subshell
@@ -54,8 +55,17 @@ def test_convert_wheel_with_tests(tmp_path, capsys):
 
     with open(test_dir / "run_test.py", 'w') as f:
         f.write("print(\"run_test.py present\")")
-    with open(test_dir / "run_test.sh", 'w') as f:
-        f.write("echo run_test.sh present")
+
+    # Create platform-specific shell script
+    if sys.platform == "win32":
+        script_output = "run_test.bat present"
+        with open(test_dir / "run_test.bat", 'w') as f:
+            f.write(f"@echo {script_output}")
+    else:
+        script_output = "run_test.sh present"
+        with open(test_dir / "run_test.sh", 'w') as f:
+            f.write(f"echo {script_output}")
+
     with open(test_dir / "test_time_dependencies.json", 'w') as f:
         f.write("[\n  \"pip\"\n]")
 
@@ -75,7 +85,7 @@ def test_convert_wheel_with_tests(tmp_path, capsys):
     main_subshell(*args)
     captured = capsys.readouterr()
     assert "run_test.py present" in captured.out
-    assert "run_test.sh present" in captured.out
+    assert script_output in captured.out
     assert "pip:" in captured.out
 
 
@@ -88,8 +98,17 @@ def test_convert_source_with_tests(tmp_path, capsys):
 
     with open(test_dir / "run_test.py", 'w') as f:
         f.write("print(\"run_test.py present from source\")")
-    with open(test_dir / "run_test.sh", 'w') as f:
-        f.write("echo run_test.sh present from source")
+
+    # Create platform-specific shell script
+    if sys.platform == "win32":
+        script_output = "run_test.bat present from source"
+        with open(test_dir / "run_test.bat", 'w') as f:
+            f.write(f"@echo {script_output}")
+    else:
+        script_output = "run_test.sh present from source"
+        with open(test_dir / "run_test.sh", 'w') as f:
+            f.write(f"echo {script_output}")
+
     with open(test_dir / "test_time_dependencies.json", 'w') as f:
         f.write("[\n  \"pip\"\n]")
 
@@ -108,7 +127,7 @@ def test_convert_source_with_tests(tmp_path, capsys):
     main_subshell(*args)
     captured = capsys.readouterr()
     assert "run_test.py present from source" in captured.out
-    assert "run_test.sh present from source" in captured.out
+    assert script_output in captured.out
     assert "pip:" in captured.out
 
 
