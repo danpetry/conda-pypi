@@ -114,6 +114,7 @@ def execute(args: Namespace) -> int:
             distribution=distribution,
             output_path=output_folder,
             prefix=prefix_path,
+            test_dir=test_dir,
         )
 
     print(f"Conda package at {package_path} built successfully. Output folder: {output_folder}.")

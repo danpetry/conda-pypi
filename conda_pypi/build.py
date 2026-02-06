@@ -219,6 +219,7 @@ def pypa_to_conda(
     prefix: Path,
     distribution="editable",
     output_path: Optional[Path] = None,
+    test_dir: Optional[Path] = None,
 ):
     project = Path(project)
 
@@ -243,6 +244,7 @@ def pypa_to_conda(
             output_path or tmp_path,
             sys.executable,
             project_path=project,
+            test_dir=test_dir,
             is_editable=distribution == "editable",
         )
 
