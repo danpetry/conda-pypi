@@ -75,6 +75,8 @@ def configure_parser(parser: _SubParsersAction) -> None:
         type=Path,
         required=False,
         default=None,
+        help="Directory containing test files to inject into the conda package. "
+        "Must be structured as a conda test directory for the tests to work.",
     )
 
 
