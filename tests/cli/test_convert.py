@@ -111,3 +111,16 @@ def test_convert_source_with_tests(tmp_path, capsys):
     assert "run_test.sh present from source" in captured.out
     assert "pip:" in captured.out
 
+
+def test_convert_with_invalid_test_dir(tmp_path):
+    """Test that invalid test directory raises an appropriate error."""
+    out_dir = tmp_path / "out"
+    out_dir.mkdir()
+    nonexistent_dir = tmp_path / "nonexistent"
+
+    wheel_path = "tests/pypi_local_index/demo-package/demo_package-0.1.0-py3-none-any.whl"
+    args = ["pypi", "convert", "--output-folder", str(out_dir), "--test-dir", str(nonexistent_dir), wheel_path]
+
+    with pytest.raises(FileNotFoundError, match="Test directory does not exist"):
+        main_subshell(*args)
+

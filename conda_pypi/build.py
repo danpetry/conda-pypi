@@ -175,6 +175,10 @@ def build_conda(
         update_RECORD(record_path, site_packages, direct_url_path)
 
     if test_dir:
+        if not test_dir.exists():
+            raise FileNotFoundError(f"Test directory does not exist: {test_dir}")
+        if not test_dir.is_dir():
+            raise NotADirectoryError(f"Test path is not a directory: {test_dir}")
         shutil.copytree(test_dir, build_path / "info" / "test")
 
     # Write conda's paths after all other changes
