@@ -92,9 +92,7 @@ def execute(args: Namespace) -> int:
     if not Path(args.project_path).exists():
         raise ArgumentError("PROJECT must be a local path to a sdist, wheel or directory.")
     project_path = Path(args.project_path).expanduser()
-    test_dir = args.test_dir
-    if test_dir:
-        test_dir = Path(args.test_dir).expanduser()
+    test_dir = args.test_dir.expanduser() if args.test_dir else None
     output_folder = Path(args.output_folder).expanduser()
     output_folder.mkdir(parents=True, exist_ok=True)
 
