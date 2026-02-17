@@ -50,27 +50,16 @@ def test_convert_wheel_with_tests(tmp_path, capsys):
     """Test converting an existing wheel file to conda package and injecting a test directory."""
     out_dir = tmp_path / "out"
     out_dir.mkdir()
-    test_dir = tmp_path / "test"
-    test_dir.mkdir()
+    test_dir = "tests/packages/has-test-dir/test"
 
-    with open(test_dir / "run_test.py", 'w') as f:
-        f.write("print(\"run_test.py present\")")
-
-    # Create platform-specific shell script
+    # Set platform-specific expected output
     if sys.platform == "win32":
         script_output = "run_test.bat present"
-        with open(test_dir / "run_test.bat", 'w') as f:
-            f.write(f"@echo {script_output}")
     else:
         script_output = "run_test.sh present"
-        with open(test_dir / "run_test.sh", 'w') as f:
-            f.write(f"echo {script_output}")
-
-    with open(test_dir / "test_time_dependencies.json", 'w') as f:
-        f.write("[\n  \"pip\"\n]")
 
     wheel_path = "tests/pypi_local_index/demo-package/demo_package-0.1.0-py3-none-any.whl"
-    args = ["pypi", "convert", "--output-folder", str(out_dir), "--test-dir", str(test_dir), wheel_path]
+    args = ["pypi", "convert", "--output-folder", str(out_dir), "--test-dir", test_dir, wheel_path]
     main_subshell(*args)
 
     files = list(out_dir.glob("*.conda"))
@@ -93,27 +82,16 @@ def test_convert_source_with_tests(tmp_path, capsys):
     """Test converting a source package to conda package and injecting a test directory."""
     out_dir = tmp_path / "out"
     out_dir.mkdir()
-    test_dir = tmp_path / "test"
-    test_dir.mkdir()
+    test_dir = "tests/packages/has-test-dir/test"
 
-    with open(test_dir / "run_test.py", 'w') as f:
-        f.write("print(\"run_test.py present from source\")")
-
-    # Create platform-specific shell script
+    # Set platform-specific expected output
     if sys.platform == "win32":
-        script_output = "run_test.bat present from source"
-        with open(test_dir / "run_test.bat", 'w') as f:
-            f.write(f"@echo {script_output}")
+        script_output = "run_test.bat present"
     else:
-        script_output = "run_test.sh present from source"
-        with open(test_dir / "run_test.sh", 'w') as f:
-            f.write(f"echo {script_output}")
-
-    with open(test_dir / "test_time_dependencies.json", 'w') as f:
-        f.write("[\n  \"pip\"\n]")
+        script_output = "run_test.sh present"
 
     source_path = "tests/packages/has-build-dep"
-    args = ["pypi", "convert", "--output-folder", str(out_dir), "--test-dir", str(test_dir), source_path]
+    args = ["pypi", "convert", "--output-folder", str(out_dir), "--test-dir", test_dir, source_path]
     main_subshell(*args)
 
     files = list(out_dir.glob("*.conda"))
@@ -126,7 +104,7 @@ def test_convert_source_with_tests(tmp_path, capsys):
     print(args)
     main_subshell(*args)
     captured = capsys.readouterr()
-    assert "run_test.py present from source" in captured.out
+    assert "run_test.py present" in captured.out
     assert script_output in captured.out
     assert "pip:" in captured.out
 
