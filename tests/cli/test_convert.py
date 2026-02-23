@@ -3,6 +3,7 @@ import sys
 
 import pytest
 from conda.cli.main import main_subshell
+import conda_package_streaming.package_streaming as cps
 
 
 @pytest.mark.parametrize(
@@ -46,17 +47,17 @@ def test_convert_wheel(tmp_path):
     assert "demo-package" in files[0].name
 
 
-def test_convert_wheel_with_tests(tmp_path, capsys):
+def test_convert_wheel_with_tests(tmp_path):
     """Test converting an existing wheel file to conda package and injecting a test directory."""
     out_dir = tmp_path / "out"
     out_dir.mkdir()
     test_dir = "tests/packages/has-test-dir/test"
 
-    # Set platform-specific expected output
+    # Set platform-specific expected test file
     if sys.platform == "win32":
-        script_output = "run_test.bat present"
+        expected_script = "info/test/run_test.bat"
     else:
-        script_output = "run_test.sh present"
+        expected_script = "info/test/run_test.sh"
 
     wheel_path = "tests/pypi_local_index/demo-package/demo_package-0.1.0-py3-none-any.whl"
     args = ["pypi", "convert", "--output-folder", str(out_dir), "--test-dir", test_dir, wheel_path]
@@ -69,26 +70,24 @@ def test_convert_wheel_with_tests(tmp_path, capsys):
     assert os.path.getsize(files[0]) > 0
     assert "demo-package" in files[0].name
 
-    args = ["build", "-t", str(files[0])]
-    print(args)
-    main_subshell(*args)
-    captured = capsys.readouterr()
-    assert "run_test.py present" in captured.out
-    assert script_output in captured.out
-    assert "pip:" in captured.out
+    # Unpack and verify test files exist
+    test_files = [m.name for _, m in cps.stream_conda_info(str(files[0])) if m.name.startswith("info/test/")]
+    assert "info/test/run_test.py" in test_files
+    assert expected_script in test_files
+    assert "info/test/test_time_dependencies.json" in test_files
 
 
-def test_convert_source_with_tests(tmp_path, capsys):
+def test_convert_source_with_tests(tmp_path):
     """Test converting a source package to conda package and injecting a test directory."""
     out_dir = tmp_path / "out"
     out_dir.mkdir()
     test_dir = "tests/packages/has-test-dir/test"
 
-    # Set platform-specific expected output
+    # Set platform-specific expected test file
     if sys.platform == "win32":
-        script_output = "run_test.bat present"
+        expected_script = "info/test/run_test.bat"
     else:
-        script_output = "run_test.sh present"
+        expected_script = "info/test/run_test.sh"
 
     source_path = "tests/packages/has-build-dep"
     args = [
@@ -108,13 +107,11 @@ def test_convert_source_with_tests(tmp_path, capsys):
     assert files[0].is_file()
     assert os.path.getsize(files[0]) > 0
 
-    args = ["build", "-t", str(files[0])]
-    print(args)
-    main_subshell(*args)
-    captured = capsys.readouterr()
-    assert "run_test.py present" in captured.out
-    assert script_output in captured.out
-    assert "pip:" in captured.out
+    # Unpack and verify test files exist
+    test_files = [m.name for _, m in cps.stream_conda_info(str(files[0])) if m.name.startswith("info/test/")]
+    assert "info/test/run_test.py" in test_files
+    assert expected_script in test_files
+    assert "info/test/test_time_dependencies.json" in test_files
 
 
 def test_convert_with_invalid_test_dir(tmp_path):

@@ -93,6 +93,16 @@ def execute(args: Namespace) -> int:
         raise ArgumentError("PROJECT must be a local path to a sdist, wheel or directory.")
     project_path = Path(args.project_path).expanduser()
     test_dir = args.test_dir.expanduser() if args.test_dir else None
+
+    if test_dir:
+        if not test_dir.exists():
+            raise FileNotFoundError(f"Test directory does not exist: {test_dir}")
+        if not test_dir.is_dir():
+            raise NotADirectoryError(f"Test path is not a directory: {test_dir}")
+        run_test_files = list(test_dir.glob("run_test.*"))
+        if not run_test_files:
+            raise ValueError(f"Test directory must contain at least one run_test.* file: {test_dir}")
+
     output_folder = Path(args.output_folder).expanduser()
     output_folder.mkdir(parents=True, exist_ok=True)
 
