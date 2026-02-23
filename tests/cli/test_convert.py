@@ -91,7 +91,15 @@ def test_convert_source_with_tests(tmp_path, capsys):
         script_output = "run_test.sh present"
 
     source_path = "tests/packages/has-build-dep"
-    args = ["pypi", "convert", "--output-folder", str(out_dir), "--test-dir", test_dir, source_path]
+    args = [
+        "pypi",
+        "convert",
+        "--output-folder",
+        str(out_dir),
+        "--test-dir",
+        test_dir,
+        source_path,
+    ]
     main_subshell(*args)
 
     files = list(out_dir.glob("*.conda"))
@@ -116,7 +124,15 @@ def test_convert_with_invalid_test_dir(tmp_path):
     nonexistent_dir = tmp_path / "nonexistent"
 
     wheel_path = "tests/pypi_local_index/demo-package/demo_package-0.1.0-py3-none-any.whl"
-    args = ["pypi", "convert", "--output-folder", str(out_dir), "--test-dir", str(nonexistent_dir), wheel_path]
+    args = [
+        "pypi",
+        "convert",
+        "--output-folder",
+        str(out_dir),
+        "--test-dir",
+        str(nonexistent_dir),
+        wheel_path,
+    ]
 
     with pytest.raises(FileNotFoundError, match="Test directory does not exist"):
         main_subshell(*args)
@@ -130,12 +146,19 @@ def test_convert_with_test_dir_missing_run_test(tmp_path):
     test_dir.mkdir()
 
     # Create a file that doesn't match run_test.*
-    with open(test_dir / "other_file.txt", 'w') as f:
+    with open(test_dir / "other_file.txt", "w") as f:
         f.write("some content")
 
     wheel_path = "tests/pypi_local_index/demo-package/demo_package-0.1.0-py3-none-any.whl"
-    args = ["pypi", "convert", "--output-folder", str(out_dir), "--test-dir", str(test_dir), wheel_path]
+    args = [
+        "pypi",
+        "convert",
+        "--output-folder",
+        str(out_dir),
+        "--test-dir",
+        str(test_dir),
+        wheel_path,
+    ]
 
     with pytest.raises(ValueError, match="Test directory must contain at least one run_test"):
         main_subshell(*args)
-

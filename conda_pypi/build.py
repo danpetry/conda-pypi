@@ -181,7 +181,9 @@ def build_conda(
             raise NotADirectoryError(f"Test path is not a directory: {test_dir}")
         run_test_files = list(test_dir.glob("run_test.*"))
         if not run_test_files:
-            raise ValueError(f"Test directory must contain at least one run_test.* file: {test_dir}")
+            raise ValueError(
+                f"Test directory must contain at least one run_test.* file: {test_dir}"
+            )
         shutil.copytree(test_dir, build_path / "info" / "test")
 
     # Write conda's paths after all other changes
