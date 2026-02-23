@@ -71,7 +71,9 @@ def test_convert_wheel_with_tests(tmp_path):
     assert "demo-package" in files[0].name
 
     # Unpack and verify test files exist
-    test_files = [m.name for _, m in cps.stream_conda_info(str(files[0])) if m.name.startswith("info/test/")]
+    test_files = [
+        m.name for _, m in cps.stream_conda_info(str(files[0])) if m.name.startswith("info/test/")
+    ]
     assert "info/test/run_test.py" in test_files
     assert expected_script in test_files
     assert "info/test/test_time_dependencies.json" in test_files
@@ -108,7 +110,9 @@ def test_convert_source_with_tests(tmp_path):
     assert os.path.getsize(files[0]) > 0
 
     # Unpack and verify test files exist
-    test_files = [m.name for _, m in cps.stream_conda_info(str(files[0])) if m.name.startswith("info/test/")]
+    test_files = [
+        m.name for _, m in cps.stream_conda_info(str(files[0])) if m.name.startswith("info/test/")
+    ]
     assert "info/test/run_test.py" in test_files
     assert expected_script in test_files
     assert "info/test/test_time_dependencies.json" in test_files

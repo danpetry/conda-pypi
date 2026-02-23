@@ -101,7 +101,9 @@ def execute(args: Namespace) -> int:
             raise NotADirectoryError(f"Test path is not a directory: {test_dir}")
         run_test_files = list(test_dir.glob("run_test.*"))
         if not run_test_files:
-            raise ValueError(f"Test directory must contain at least one run_test.* file: {test_dir}")
+            raise ValueError(
+                f"Test directory must contain at least one run_test.* file: {test_dir}"
+            )
 
     output_folder = Path(args.output_folder).expanduser()
     output_folder.mkdir(parents=True, exist_ok=True)
