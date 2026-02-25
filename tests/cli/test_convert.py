@@ -1,5 +1,4 @@
 import os
-import sys
 
 import pytest
 from conda.cli.main import main_subshell
@@ -60,7 +59,15 @@ def test_convert_wheel_with_tests(tmp_path):
     out_dir = tmp_path / "out"
     out_dir.mkdir()
 
-    args = ["pypi", "convert", "--output-folder", str(out_dir), "--test-dir", PKG_TEST_DIR, DEMO_WHEEL]
+    args = [
+        "pypi",
+        "convert",
+        "--output-folder",
+        str(out_dir),
+        "--test-dir",
+        PKG_TEST_DIR,
+        DEMO_WHEEL,
+    ]
     main_subshell(*args)
 
     files = list(out_dir.glob("*.conda"))
