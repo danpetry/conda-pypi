@@ -55,7 +55,7 @@ def test_convert_wheel_with_tests(tmp_path):
     test_dir = "tests/packages/has-test-dir/test"
 
     # Set platform-specific expected test file
-    if sys.platform == "win32":
+    if on_win:
         expected_script = "info/test/run_test.bat"
     else:
         expected_script = "info/test/run_test.sh"
@@ -87,7 +87,7 @@ def test_convert_source_with_tests(tmp_path):
     test_dir = "tests/packages/has-test-dir/test"
 
     # Set platform-specific expected test file
-    if sys.platform == "win32":
+    if on_win:
         expected_script = "info/test/run_test.bat"
     else:
         expected_script = "info/test/run_test.sh"
