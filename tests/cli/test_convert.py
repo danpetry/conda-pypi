@@ -3,6 +3,7 @@ import sys
 
 import pytest
 from conda.cli.main import main_subshell
+from conda.common.compat import on_win
 import conda_package_streaming.package_streaming as cps
 
 
