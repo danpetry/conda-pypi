@@ -3,9 +3,7 @@ Convert Python `*.dist-info/METADATA` to conda `info/index.json`
 """
 
 import dataclasses
-import json
 import logging
-import pkgutil
 import sys
 import time
 from importlib.metadata import Distribution, PackageMetadata, PathDistribution
@@ -15,7 +13,8 @@ from typing import Any, Optional, List, Dict, Callable
 from conda.exceptions import ArgumentError
 from conda.models.match_spec import MatchSpec
 from packaging.requirements import Requirement
-from packaging.utils import canonicalize_name
+
+from conda_pypi.name_mapping import conda_to_pypi_name, pypi_to_conda_name
 
 log = logging.getLogger(__name__)
 
@@ -175,19 +174,6 @@ class CondaMetadata:
         )
 
 
-# The keys are pypi names
-# conda_pypi.dist_repodata.grayskull_pypi_mapping['zope-hookable']
-# {
-#     "pypi_name": "zope-hookable",
-#     "conda_name": "zope.hookable",
-#     "import_name": "zope.hookable",
-#     "mapping_source": "regro-bot",
-# }
-grayskull_pypi_mapping = json.loads(
-    pkgutil.get_data("conda_pypi", "grayskull_pypi_mapping.json") or "{}"
-)
-
-
 def requires_to_conda(
     requires: Optional[List[str]], pypi_to_conda_name_mapping: dict | None = None
 ):
@@ -196,26 +182,23 @@ def requires_to_conda(
     extras: Dict[str, List[str]] = defaultdict(list)
     requirements = []
     for requirement in [Requirement(dep) for dep in requires or []]:
-        # requirement.marker.evaluate
+        # Use parsed Requirement.name so unmapped conda names preserve dots (lookup still canonicalizes).
+        requirement.name = pypi_to_conda_name(requirement.name, pypi_to_conda_name_mapping)
+        # PEP 508 optional dependency extras (e.g. requests[security]) are intentionally
+        # omitted: conda MatchSpec does not support the name[extras] bracket syntax yet
+        as_conda = requirement.name + str(requirement.specifier)
 
-        # if requirement.marker and not requirement.marker.evaluate():
-        #     # excluded by environment marker
-        #     # see also marker evaluation according to given sys.executable
-        #     continue
-
-        name = canonicalize_name(requirement.name)
-        requirement.name = pypi_to_conda_name(name, pypi_to_conda_name_mapping)
-        as_conda = f"{requirement.name} {requirement.specifier}"
-
+        # Wheel METADATA → conda depends: do not emit ``[when=…]`` (conda MatchSpec does not
+        # parse it yet). Match main: only ``extra == …`` is routed to the extras map.
+        # Other markers are omitted from depends.
         if (marker := requirement.marker) is not None:
-            # for var, _, value in marker._markers:
             for mark in marker._markers:
                 if isinstance(mark, tuple):
                     var, _, value = mark
                     if str(var) == "extra":
                         extras[str(value)].append(as_conda)
         else:
-            requirements.append(f"{requirement.name} {requirement.specifier}".strip())
+            requirements.append(as_conda)
 
     return requirements, dict(extras)
 
@@ -302,39 +285,6 @@ def validate_name_mapping_format(mapping: dict) -> None:
             raise ArgumentError(
                 f"Name mapping entry for {pypi_name!r} has invalid 'conda_name' type: expected str, got {type(value['conda_name']).__name__}"
             )
-
-
-def pypi_to_conda_name(pypi_name: str, pypi_to_conda_name_mapping: dict | None = None):
-    pypi_name = canonicalize_name(pypi_name)
-    return (
-        pypi_to_conda_name_mapping
-        if pypi_to_conda_name_mapping is not None
-        else grayskull_pypi_mapping
-    ).get(
-        pypi_name,
-        {
-            "pypi_name": pypi_name,
-            "conda_name": pypi_name,
-            "import_name": None,
-            "mapping_source": None,
-        },
-    )["conda_name"]
-
-
-_to_pypi_name_map = {}
-
-
-def conda_to_pypi_name(name: str):
-    if not _to_pypi_name_map:
-        for value in grayskull_pypi_mapping.values():
-            conda_name = value["conda_name"]
-            # XXX sometimes conda:pypi is n:1
-            _to_pypi_name_map[conda_name] = value
-
-    found = _to_pypi_name_map.get(name)
-    if found:
-        name = found["pypi_name"]
-    return canonicalize_name(name)
 
 
 if __name__ == "__main__":  # pragma: no cover

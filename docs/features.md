@@ -64,8 +64,9 @@ mapping of PyPI dependencies to conda equivalents and provides cross-platform
 support for package conversion, ensuring that converted packages work
 across different operating systems and architectures.
 
-(pypi-lines)=
+### Dependency environment markers (PEP 508)
 
+PyPI [environment markers](https://packaging.python.org/en/latest/specifications/dependency-specifiers/#environment-markers) are translated for the solver where possible. When building installable .conda packages from wheels, `[when="…"]` is not attached to dependency strings — the `extra == "…"` marker is split into per-extra tables, and other marker conditions are omitted from depends. See {doc}`developer/marker-conversion`.
 
 ## Wheel channels
 
@@ -89,10 +90,12 @@ conda install -c https://my-wheel-channel requests
 
 Wheels served this way behave like any other conda package.
 
-### Extras
+### Extras and markers
 
 Wheels in a channel can declare [dependency specifier extras](https://packaging.python.org/en/latest/specifications/dependency-specifiers/#extras)
 via an `extra_depends` field in the repodata entry.
+
+In the PyPA grammar, extras are a comma-separated list of names. Multiple extras union their requirements, and there is no reserved name meaning “all extras.” Optional extras in `extra_depends` are resolved by the Rattler solver.
 
 ## Editable Package Support
 

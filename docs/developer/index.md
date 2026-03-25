@@ -22,6 +22,12 @@ Technical architecture, plugin system design, and data flow
 Implementation details, technical insights, and development considerations
 :::
 
+:::{grid-item-card} Marker conversion
+:link: marker-conversion
+:link-type: doc
+How PEP 508 environment markers become repodata (`when` / extras)
+:::
+
 ::::
 
 ::::{grid} 1
@@ -79,6 +85,8 @@ conda-pypi/
 │   ├── cli/             # Command-line interface
 │   ├── build.py         # Wheel to conda conversion
 │   ├── translate.py     # PyPI ↔ Conda metadata translation
+│   ├── name_mapping.py  # Grayskull PyPI → conda package names
+│   ├── markers.py       # PEP 508 markers → `[when=…]` on repodata
 │   ├── convert_tree.py  # Dependency resolution
 │   └── ...
 ├── tests/               # Test suite
@@ -109,5 +117,6 @@ When contributing to `conda-pypi`:
 
 architecture
 developer-notes
+marker-conversion
 testing/index
 ```

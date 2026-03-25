@@ -3,7 +3,7 @@
 import pytest
 from conda.exceptions import ArgumentError
 
-from conda_pypi.translate import validate_name_mapping_format
+from conda_pypi.translate import requires_to_conda, validate_name_mapping_format
 
 
 def test_validate_name_mapping_format_valid():
@@ -94,3 +94,42 @@ def test_validate_name_mapping_format_multiple_errors():
         validate_name_mapping_format(
             {123: {"conda_name": "test"}, "valid": {"conda_name": "test"}}
         )
+
+
+def test_requires_to_conda_marker_without_extra_omitted_from_depends():
+    """Wheel path matches main: non-extra PEP 508 markers are not added to depends."""
+    requires, extras = requires_to_conda(
+        ['typing-extensions>=4; python_version < "3.9"'],
+    )
+    assert not extras
+    assert requires == []
+
+
+def test_requires_to_conda_unmapped_dotted_name_preserves_dots():
+    """Unmapped PyPI names with dots must not be turned into canonical hyphen form."""
+    requires, extras = requires_to_conda(["jaraco.tidelift>=1"])
+    assert not extras
+    assert requires[0] == "jaraco.tidelift>=1"
+
+
+def test_requires_to_conda_omits_pep508_dependency_extras_for_rattler():
+    """PEP 508 optional dependency extras are omitted from depends (Rattler cannot parse them)."""
+    requires, extras_map = requires_to_conda(
+        ["httpx[cli,http2]>=0.24.0", 'requests[socks]>=2.0; extra == "dev"'],
+    )
+    assert requires == ["httpx>=0.24.0"]
+    assert "dev" in extras_map
+    assert extras_map["dev"] == ["requests>=2.0"]
+
+
+def test_requires_to_conda_marker_extra_and_platform():
+    """Extras go to extras map; platform markers are omitted from depends (no [when=…])."""
+    requires, extras = requires_to_conda(
+        [
+            'requests>=2; extra == "dev"',
+            'colorama>=0.4; sys_platform == "win32"',
+        ],
+    )
+    assert "dev" in extras
+    assert any(x.startswith("requests>=") for x in extras["dev"])
+    assert requires == []
