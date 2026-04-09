@@ -27,6 +27,101 @@ from conda_pypi.utils import sha256_as_base64url
 
 log = logging.getLogger(__name__)
 
+# Common license file patterns for fallback detection.
+# Based on common conventions and wheel/setuptools defaults.
+LICENSE_PATTERNS = (
+    "LICENSE",
+    "LICENCE",
+    "COPYING",
+    "NOTICE",
+    "AUTHORS",
+)
+LICENSE_EXTENSIONS = ("", ".txt", ".md", ".rst")
+
+
+def get_license_files(dist_info: Path) -> list[Path]:
+    """
+    Find license files from a wheel's dist-info directory.
+
+    Reads License-File entries from METADATA (PEP 639). If none are found,
+    falls back to searching for common license file patterns.
+
+    Args:
+        dist_info: Path to the *.dist-info directory.
+
+    Returns:
+        List of paths to license files found.
+    """
+    license_files: list[Path] = []
+
+    # Read License-File entries from METADATA (PEP 639)
+    metadata_path = dist_info / "METADATA"
+    if metadata_path.exists():
+        for line in metadata_path.read_text(encoding="utf-8").splitlines():
+            if line.startswith("License-File:"):
+                filename = line.split(":", 1)[1].strip()
+                # PEP 639: files are in dist-info/licenses/ subdirectory
+                license_path = dist_info / "licenses" / filename
+                if license_path.exists():
+                    license_files.append(license_path)
+                else:
+                    # Older wheels may have license at dist-info/<filename>
+                    license_path = dist_info / filename
+                    if license_path.exists():
+                        license_files.append(license_path)
+                    else:
+                        log.warning(f"License-File '{filename}' not found in {dist_info}")
+
+    # Fallback: search for common license patterns if no License-File entries
+    if not license_files:
+        # Check dist-info/licenses/ directory
+        licenses_dir = dist_info / "licenses"
+        if licenses_dir.is_dir():
+            for f in licenses_dir.iterdir():
+                if f.is_file():
+                    license_files.append(f)
+
+        # Check dist-info/ for common license patterns
+        if not license_files:
+            for pattern in LICENSE_PATTERNS:
+                for ext in LICENSE_EXTENSIONS:
+                    candidate = dist_info / f"{pattern}{ext}"
+                    if candidate.exists():
+                        license_files.append(candidate)
+
+    return license_files
+
+
+def copy_licenses_to_info(dist_info: Path, info_path: Path) -> list[str]:
+    """
+    Copy license files from wheel dist-info to conda info/licenses/.
+
+    Per CEP 34, info/licenses/ is the canonical location for license files
+    in conda packages.
+
+    Args:
+        dist_info: Path to the *.dist-info directory.
+        info_path: Path to the conda package's info/ directory.
+
+    Returns:
+        List of license filenames copied.
+    """
+    license_files = get_license_files(dist_info)
+    if not license_files:
+        return []
+
+    licenses_dir = info_path / "licenses"
+    licenses_dir.mkdir(exist_ok=True)
+
+    copied = []
+    for license_file in license_files:
+        dest = licenses_dir / license_file.name
+        shutil.copy2(license_file, dest)
+        copied.append(license_file.name)
+        log.debug(f"Copied license file: {license_file.name}")
+
+    return copied
+
 
 def filter(tarinfo):
     """
@@ -162,6 +257,9 @@ def build_conda(
     # used especially for console_scripts
     if link_json := metadata.link_json():
         (build_path / "info" / "link.json").write_text(json_dumps(link_json))
+
+    # Copy license files to info/licenses/ per CEP 34
+    copy_licenses_to_info(dist_info, build_path / "info")
 
     # Allow pip to list us as editable or show the path to our project.
     # XXX leaks path
