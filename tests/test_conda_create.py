@@ -1,9 +1,12 @@
 import hashlib
 import json
+import logging
 import os
 from pathlib import Path
 
 from conda.cli.main import main_subshell
+from conda.common.compat import on_win
+from conda.common.path.windows import win_path_to_unix
 from conda.exceptions import DryRunExit
 from conda_package_streaming.create import conda_builder
 
@@ -12,6 +15,7 @@ from conda_pypi.conda_build_utils import PathType, sha256_checksum
 from conda_pypi.index import update_index
 from conda_pypi.translate import PackageRecord
 
+log = logging.getLogger(__name__)
 here = Path(__file__).parent
 
 
@@ -41,9 +45,24 @@ def test_indexable(tmp_path):
             if child.name == "info":
                 # Add info contents with "info/" prefix to route to info_tar.
                 for info_entry in child.rglob("*"):
-                    if info_entry.is_file():
-                        arcname = str(info_entry.relative_to(dest))
+                    arcname = str(info_entry.relative_to(dest))
+                    if on_win:
+                        arcname = win_path_to_unix(arcname)
+                    if info_entry.is_symlink():
+                        # Validate symlink target stays within dest
+                        try:
+                            target = info_entry.resolve()
+                            if not target.is_relative_to(dest):
+                                log.warning(f"Skipping symlink with external target: {info_entry}")
+                                continue
+                        except (OSError, ValueError):
+                            log.warning(f"Skipping unresolvable symlink: {info_entry}")
+                            continue
                         tar.add(info_entry, arcname, filter=filter)
+                    elif info_entry.is_file():
+                        tar.add(info_entry, arcname, filter=filter)
+                    elif info_entry.is_dir():
+                        tar.add(info_entry, arcname, recursive=False, filter=filter)
             else:
                 tar.add(child, child.name, recursive=True, filter=filter)
 

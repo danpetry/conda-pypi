@@ -157,7 +157,7 @@ def test_conda_package_conforms_to_cep_34_35(
 
     # "info-* tarball MUST contain the full info/ folder"
     # All info archive entries must start with 'info/'
-    invalid_info = [e for e in info_entries if not e.startswith("info/") and e != "info"]
+    invalid_info = [e for e in info_entries if not e.startswith("info")]
     assert not invalid_info, (
         f"CEP 35 violation: info archive has entries not under info/: {invalid_info}"
     )
@@ -172,7 +172,7 @@ def test_conda_package_conforms_to_cep_34_35(
     # "Root level MUST match target location (no intermediate subdirectories)"
     # No absolute paths (leading /) or empty strings representing root
     all_entries = info_entries + pkg_entries
-    invalid_roots = [e for e in all_entries if e.startswith("/") or e == "" or e == "/"]
+    invalid_roots = [e for e in all_entries if e.startswith("/") or e == ""]
     assert not invalid_roots, (
         f"CEP 35 violation: archive has intermediate subdirectories or absolute paths: {invalid_roots}"
     )

@@ -192,9 +192,24 @@ def build_conda(
                 # info_tar (CondaTarFile.is_info uses name.startswith("info/")).
                 # Skip the directory entry itself to avoid it going to pkg_tar.
                 for info_entry in child.rglob("*"):
-                    if info_entry.is_file():
-                        arcname = str(info_entry.relative_to(build_path))
+                    arcname = str(info_entry.relative_to(build_path))
+                    if on_win:
+                        arcname = win_path_to_unix(arcname)
+                    if info_entry.is_symlink():
+                        # Validate symlink target stays within build_path (untrusted wheel input)
+                        try:
+                            target = info_entry.resolve()
+                            if not target.is_relative_to(build_path):
+                                log.warning(f"Skipping symlink with external target: {info_entry}")
+                                continue
+                        except (OSError, ValueError):
+                            log.warning(f"Skipping unresolvable symlink: {info_entry}")
+                            continue
                         tar.add(info_entry, arcname, filter=filter)
+                    elif info_entry.is_file():
+                        tar.add(info_entry, arcname, filter=filter)
+                    elif info_entry.is_dir():
+                        tar.add(info_entry, arcname, recursive=False, filter=filter)
             else:
                 tar.add(child, child.name, recursive=True, filter=filter)
 
