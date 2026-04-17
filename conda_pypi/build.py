@@ -186,7 +186,17 @@ def build_conda(
     (build_path / "info" / "paths.json").write_text(json_dumps(paths))
 
     with conda_builder(file_id, output_path) as tar:
-        tar.add(build_path, "", filter=filter)
+        for child in sorted(build_path.iterdir()):
+            if child.name == "info":
+                # Add info directory contents with "info/" prefix to route to
+                # info_tar (CondaTarFile.is_info uses name.startswith("info/")).
+                # Skip the directory entry itself to avoid it going to pkg_tar.
+                for info_entry in child.rglob("*"):
+                    if info_entry.is_file():
+                        arcname = str(info_entry.relative_to(build_path))
+                        tar.add(info_entry, arcname, filter=filter)
+            else:
+                tar.add(child, child.name, recursive=True, filter=filter)
 
     return output_path / f"{file_id}.conda"
 

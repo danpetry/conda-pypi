@@ -37,7 +37,15 @@ def test_indexable(tmp_path):
     (dest / "info" / "paths.json").write_text(json.dumps(paths))
 
     with conda_builder(record.stem, noarch) as tar:
-        tar.add(dest, "", filter=filter)
+        for child in sorted(dest.iterdir()):
+            if child.name == "info":
+                # Add info contents with "info/" prefix to route to info_tar.
+                for info_entry in child.rglob("*"):
+                    if info_entry.is_file():
+                        arcname = str(info_entry.relative_to(dest))
+                        tar.add(info_entry, arcname, filter=filter)
+            else:
+                tar.add(child, child.name, recursive=True, filter=filter)
 
     update_index(tmp_path)
 
