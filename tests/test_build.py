@@ -1,10 +1,10 @@
 import json
+import sys
 from pathlib import Path
 
-from conda_package_streaming import package_streaming
-
-from conda.testing.fixtures import TmpEnvFixture
 from conda.common.path import get_python_short_path
+from conda.testing.fixtures import TmpEnvFixture
+from conda_package_streaming import package_streaming
 
 from conda_pypi.build import build_conda
 from conda_pypi.package_extractors.whl import extract_whl_as_conda_pkg
@@ -110,6 +110,39 @@ def test_build_conda_copies_licenses_to_info_licenses(
     assert about is not None
     assert "license_file" not in about
     assert lic_payload == b"BSD-3-Clause placeholder license text\n"
+
+
+def test_build_conda_info_members_stay_in_info_component(
+    tmp_env: TmpEnvFixture,
+    pypi_demo_package_wheel_path: Path,
+    tmp_path: Path,
+):
+    build_path = tmp_path / "build"
+    build_path.mkdir()
+    repo_path = tmp_path / "repo"
+    repo_path.mkdir()
+    out_conda = repo_path / "demo-package-0.1.0-pypi_0.conda"
+
+    build_conda(
+        pypi_demo_package_wheel_path,
+        build_path,
+        repo_path,
+        sys.executable,
+        is_editable=False,
+    )
+
+    assert out_conda.is_file()
+
+    pkg_names = {member.name for _, member in package_streaming.stream_conda_component(out_conda)}
+    info_names = {member.name for _, member in package_streaming.stream_conda_info(out_conda)}
+
+    assert all(name.startswith("site-packages") for name in pkg_names)
+    assert "/" not in pkg_names
+    assert "/" not in info_names
+    assert "info/" not in pkg_names
+    assert "info/" not in info_names
+    assert not any(name.startswith("info/") for name in pkg_names)
+    assert all(name.startswith("info/") for name in info_names)
 
 
 def test_extract_whl_copies_licenses_to_info_licenses(
