@@ -71,9 +71,10 @@ class _CondaWheelDestination(SchemeDictionaryDestination):
         with tempfile.SpooledTemporaryFile() as buffer:
             hash_, size = copyfileobj_with_hashing(stream, buffer, self.hash_algorithm)
             # hash_ is urlsafe-b64encode without padding
-            pad = "=" * (4 - (len(hash_) & 3))
-            hash_hex = base64.urlsafe_b64decode(hash_ + pad)
+            pad = "=" * (-len(hash_) % 4)
+            hash_hex = base64.urlsafe_b64decode(hash_ + pad).hex()
             tar_info.size = size
+            buffer.seek(0)
             self.conda_builder.addfile(tar_info, buffer)
 
         self.package_paths.append(
