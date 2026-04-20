@@ -110,7 +110,7 @@ def install_installer(
         "headers": str(build_path / "include"),  # C/C++ headers (PEP 427 .data/headers/)
     }
 
-    destination = SchemeDictionaryDestination(
+    destination = _CondaWheelDestination(
         scheme_dict=scheme,
         interpreter=str(python_executable),
         script_kind="posix",
