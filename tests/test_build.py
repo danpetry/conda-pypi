@@ -112,7 +112,7 @@ def test_build_conda_copies_licenses_to_info_licenses(
     assert lic_payload == b"BSD-3-Clause placeholder license text\n"
 
 
-def test_build_conda_info_members_stay_in_info_component(
+def test_build_conda_members_stay_in_info_component(
     tmp_env: TmpEnvFixture,
     pypi_demo_package_wheel_path: Path,
     tmp_path: Path,

@@ -56,15 +56,18 @@ class _CondaWheelDestination(SchemeDictionaryDestination):
         stream: BinaryIO,
         is_executable: bool,
     ) -> RecordEntry:
-        target_path = os.fspath(self._path_with_destdir(scheme, path))
-        archive_path = target_path.lstrip("/\\").replace(os.sep, "/")
+        archive_path = os.path.join(os.fspath(self.scheme_dict[scheme]), path)
+        archive_path = archive_path.replace(os.sep, "/")
+        while archive_path.startswith("./"):
+            archive_path = archive_path[2:]
+        archive_path = archive_path.lstrip("/\\")
 
         try:
             self.conda_builder.getmember(archive_path)
         except KeyError:
             pass
         else:
-            message = f"File already exists: {target_path}"
+            message = f"File already exists: {archive_path}"
             raise FileExistsError(message)
 
         tar_info = tarfile.TarInfo(name=archive_path)
