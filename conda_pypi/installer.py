@@ -44,6 +44,7 @@ class _CondaWheelDestination(SchemeDictionaryDestination):
         super().__init__(*args, **kwargs)
         self.conda_builder = conda_builder
         self.package_paths: list[dict] = []
+        self._members: set[str] = set()
 
     def write_script(self, name, module, attr, section):
         log.debug(f"Skipping script generation for {name} (handled via link.json)")
@@ -56,19 +57,13 @@ class _CondaWheelDestination(SchemeDictionaryDestination):
         stream: BinaryIO,
         is_executable: bool,
     ) -> RecordEntry:
-        archive_path = os.path.join(os.fspath(self.scheme_dict[scheme]), path)
+        archive_path = os.path.join(self.scheme_dict[scheme], path)
         archive_path = archive_path.replace(os.sep, "/")
-        while archive_path.startswith("./"):
-            archive_path = archive_path[2:]
-        archive_path = archive_path.lstrip("/\\")
 
-        try:
-            self.conda_builder.getmember(archive_path)
-        except KeyError:
-            pass
-        else:
+        if archive_path in self._members:
             message = f"File already exists: {archive_path}"
             raise FileExistsError(message)
+        self._members.add(archive_path)
 
         tar_info = tarfile.TarInfo(name=archive_path)
         tar_info.mode = 0o775 if is_executable else 0o664
