@@ -4,7 +4,7 @@ Install a wheel / install a conda.
 
 from __future__ import annotations
 
-import hashlib
+import base64
 import logging
 import os
 import subprocess
@@ -70,10 +70,9 @@ class _CondaWheelDestination(SchemeDictionaryDestination):
 
         with tempfile.SpooledTemporaryFile() as buffer:
             hash_, size = copyfileobj_with_hashing(stream, buffer, self.hash_algorithm)
-            buffer.seek(0)
-            hash_hex = hashlib.new(self.hash_algorithm, buffer.read()).hexdigest()
-            buffer.seek(0)
-
+            # hash_ is urlsafe-b64encode without padding
+            pad = "=" * (4 - (len(hash_) & 3))
+            hash_hex = base64.urlsafe_b64decode(hash_ + pad)
             tar_info.size = size
             self.conda_builder.addfile(tar_info, buffer)
 
