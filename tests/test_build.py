@@ -136,13 +136,16 @@ def test_build_conda_members_stay_in_info_component(
     pkg_names = {member.name for _, member in package_streaming.stream_conda_component(out_conda)}
     info_names = {member.name for _, member in package_streaming.stream_conda_info(out_conda)}
 
-    assert all(name.startswith("site-packages") for name in pkg_names)
     assert "/" not in pkg_names
     assert "/" not in info_names
     assert "info/" not in pkg_names
     assert "info/" not in info_names
     assert not any(name.startswith("info/") for name in pkg_names)
     assert all(name.startswith("info/") for name in info_names)
+
+    # True for our test demo_package but not universally true. Meant to catch
+    # user's homedir or /tmp/ sneaking into pkg_names:
+    assert all(name.startswith("site-packages") for name in pkg_names)
 
 
 def test_extract_whl_copies_licenses_to_info_licenses(
