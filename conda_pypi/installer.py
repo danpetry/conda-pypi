@@ -50,10 +50,6 @@ class _CondaWheelDestination(SchemeDictionaryDestination):
         log.debug(f"Skipping script generation for {name} (handled via link.json)")
         return RecordEntry(path=name, hash_=None, size=None)
 
-    def finalize_installation(self, scheme, record_file_path, records):
-        # Skip RECORD file writing - conda uses paths.json instead
-        pass
-
     def write_to_fs(
         self,
         scheme: Scheme,
@@ -61,6 +57,10 @@ class _CondaWheelDestination(SchemeDictionaryDestination):
         stream: BinaryIO,
         is_executable: bool,
     ) -> RecordEntry:
+        """
+        In installer==1.0.0, the SchemeDirectoryDestination() superclass
+        delegates all write_*() functions here.
+        """
         archive_path = os.path.join(self.scheme_dict[scheme], path)
         archive_path = archive_path.replace(os.sep, "/")
 
@@ -68,11 +68,10 @@ class _CondaWheelDestination(SchemeDictionaryDestination):
             raise ValueError(f"Path traversal detected: {archive_path}")
 
         if archive_path in self._members:
-            if not self.overwrite_existing:
-                message = f"File already exists: {archive_path}"
-                raise FileExistsError(message)
-            # Skip duplicate - already written to tar
-            return RecordEntry(path, None, None)
+            message = f"File already exists: {archive_path}"
+            if self.overwrite_existing:
+                message = "{message} overwrite_existing not available in write-to-archive."
+            raise FileExistsError(message)
         self._members.add(archive_path)
 
         tar_info = tarfile.TarInfo(name=archive_path)
