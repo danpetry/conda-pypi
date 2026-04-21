@@ -50,6 +50,8 @@ class _CondaWheelDestination(SchemeDictionaryDestination):
         log.debug(f"Skipping script generation for {name} (handled via link.json)")
         return RecordEntry(path=name, hash_=None, size=None)
 
+    # def finalize_installation() is retained, .conda includes RECORD
+
     def write_to_fs(
         self,
         scheme: Scheme,
