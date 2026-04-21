@@ -12,6 +12,7 @@ from pathlib import Path
 
 import pytest
 from conda.base.context import context
+from conda.testing.fixtures import TmpEnvFixture
 
 from conda_pypi import installer
 from conda_pypi.build import build_pypa
@@ -65,19 +66,27 @@ def test_install_installer_to_tar_data_files_present(
     )
 
 
-def test_install_installer_to_tar_headers_duplicate_members_fatal(
+def test_install_installer_headers(
+    tmp_env: TmpEnvFixture,
     wheel_with_headers: Path,
     tmp_path: Path,
 ):
-    """Duplicate files targeting the same archive path raise FileExistsError."""
-    tar_path = tmp_path / "output.tar"
-    with tarfile.open(tar_path, "w") as tar:
-        with pytest.raises(FileExistsError, match="File already exists"):
-            installer.install_installer_to_tar(
-                sys.executable,
-                wheel_with_headers,
-                tar,
-            )
+    """Wheel .data/headers/ files are installed to build_path/include/."""
+    build_path = tmp_path / "build"
+    build_path.mkdir()
+
+    with tmp_env("python=3.12") as prefix:
+        python_executable = Path(prefix, get_python_short_path())
+
+        installer.install_installer(
+            str(python_executable),
+            wheel_with_headers,
+            build_path,
+        )
+
+        header_file = build_path / "include" / "header_pkg" / "header_pkg.h"
+        assert header_file.exists()
+        assert header_file.read_text().startswith("// header_pkg public API")
 
 
 @pytest.fixture(scope="session")

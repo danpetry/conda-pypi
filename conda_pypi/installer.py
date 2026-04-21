@@ -5,6 +5,7 @@ Install a wheel / install a conda.
 from __future__ import annotations
 
 import base64
+import hashlib
 import logging
 import os
 import subprocess
@@ -66,9 +67,22 @@ class _CondaWheelDestination(SchemeDictionaryDestination):
 
         if archive_path in self._members:
             message = f"File already exists: {archive_path}"
+            raise_exists = True
             if self.overwrite_existing:
+                # could wait to add to self._members and
+                hasher = hashlib.new("sha256")
+                hasher.update(stream.read())
+                digest = hasher.hexdigest()
+                for p in self.package_paths:
+                    if p["_path"] == archive_path:
+                        if p["sha256"] == digest:
+                            log.warning(
+                                "Wheel has overlapping paths %s with same content.", archive_path
+                            )
+                            raise_exists = False
                 message = f"{message}; overwrite_existing not available in write-to-archive."
-            raise FileExistsError(message)
+            if raise_exists:
+                raise FileExistsError(message)
         self._members.add(archive_path)
 
         tar_info = tarfile.TarInfo(name=archive_path)
@@ -76,11 +90,15 @@ class _CondaWheelDestination(SchemeDictionaryDestination):
 
         with tempfile.SpooledTemporaryFile() as buffer:
             hash_, size = copyfileobj_with_hashing(stream, buffer, self.hash_algorithm)
+            # XXX move overwrite existing check here
+
             # hash_ is urlsafe-b64encode without padding
             pad = "=" * (-len(hash_) % 4)
             hash_hex = base64.urlsafe_b64decode(hash_ + pad).hex()
             tar_info.size = size
             buffer.seek(0)
+
+            # add only happens here
             self.conda_builder.addfile(tar_info, buffer)
 
         self.package_paths.append(
