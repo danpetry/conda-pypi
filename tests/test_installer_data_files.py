@@ -21,8 +21,8 @@ HERE = Path(__file__).parent
 
 
 # This mirrors the layout of the pybind11-global wheel. The identical header files
-# appear in both data/include/ and headers/. The data/ copy is listed first in RECORD
-# so it is written first. The headers/ copy must not raise a FileExistsError.
+# appear in both data/include/ and headers/. Duplicate archive members should be
+# treated as fatal to avoid ambiguous package contents.
 @pytest.fixture(scope="session")
 def wheel_with_headers() -> Path:
     return HERE / "pypi_local_index" / "header-pkg" / "header_pkg-1.0.0-py3-none-any.whl"
@@ -58,28 +58,26 @@ def test_install_installer_to_tar_data_files_present(
 
     # Data files should be recorded with data scheme path (share/)
     paths = {p["_path"] for p in package_paths}
-    data_path = "/share/test-package-with-data/data/test.txt"
+    data_path = "share/test-package-with-data/data/test.txt"
     assert data_path in paths, f"Data file not found in package_paths: {paths}"
+    assert not any(p.startswith("/") for p in paths), (
+        f"Package paths must be relative, got absolute entries: {paths}"
+    )
 
 
-def test_install_installer_to_tar_headers(
+def test_install_installer_to_tar_headers_duplicate_members_fatal(
     wheel_with_headers: Path,
     tmp_path: Path,
 ):
-    """Wheel .data/headers/ files are recorded with include/ path."""
-    # XXX we must discard the second copy of the file?
+    """Duplicate files targeting the same archive path raise FileExistsError."""
     tar_path = tmp_path / "output.tar"
     with tarfile.open(tar_path, "w") as tar:
-        package_paths = installer.install_installer_to_tar(
-            sys.executable,
-            wheel_with_headers,
-            tar,
-        )
-
-    paths = {p["_path"] for p in package_paths}
-    assert any(p.startswith("include/header_pkg/") for p in paths), (
-        f"Header files not found in package_paths: {paths}"
-    )
+        with pytest.raises(FileExistsError, match="File already exists"):
+            installer.install_installer_to_tar(
+                sys.executable,
+                wheel_with_headers,
+                tar,
+            )
 
 
 @pytest.fixture(scope="session")
@@ -108,6 +106,9 @@ def test_extract_whl_data_scheme_file_placement(
     assert "share/man/man1/man-pkg.1" in paths, "data-scheme path missing from paths.json"
     assert not any(p.startswith("site-packages/share") for p in paths), (
         "data-scheme files must not be nested under site-packages"
+    )
+    assert not any(p.startswith("/") for p in paths), (
+        "paths.json entries must be relative and must not start with '/'"
     )
 
 

@@ -11,7 +11,7 @@ import subprocess
 import tarfile
 import tempfile
 from pathlib import Path
-from typing import TYPE_CHECKING, BinaryIO
+from typing import BinaryIO, Iterable
 from unittest.mock import patch
 
 from conda.cli.main import main_subshell
@@ -20,12 +20,9 @@ from installer import install
 from installer.destinations import SchemeDictionaryDestination
 from installer.records import Hash, RecordEntry
 from installer.sources import WheelFile
-from installer.utils import Scheme, copyfileobj_with_hashing
+from installer.utils import Scheme, construct_record_file, copyfileobj_with_hashing
 
 from conda_pypi.conda_build_utils import PathType
-
-if TYPE_CHECKING:
-    from tarfile import TarFile
 
 log = logging.getLogger(__name__)
 
@@ -38,9 +35,9 @@ class _CondaWheelDestination(SchemeDictionaryDestination):
     that breaks in other environments.
     """
 
-    conda_builder: TarFile
+    conda_builder: tarfile.TarFile.TarFile
 
-    def __init__(self, *args, conda_builder: TarFile, **kwargs):
+    def __init__(self, *args, conda_builder: tarfile.TarFile.TarFile, **kwargs):
         super().__init__(*args, **kwargs)
         self.conda_builder = conda_builder
         self.package_paths: list[dict] = []
@@ -61,10 +58,8 @@ class _CondaWheelDestination(SchemeDictionaryDestination):
         In installer==1.0.0, the SchemeDirectoryDestination() superclass
         delegates all write_*() functions here.
         """
-        # without "pretend" destdir prefix
-        self._path_with_destdir
-        archive_path = os.path.join(self.scheme_dict[scheme], path)[len(self.destdir or "") :]
-        archive_path = archive_path.replace(os.sep, "/")
+        archive_path = str(Path(self.scheme_dict[scheme], path).as_posix())
+        archive_path = archive_path.lstrip("/")
 
         if ".." in archive_path.split("/"):
             raise ValueError(f"Path traversal detected: {archive_path}")
@@ -76,7 +71,7 @@ class _CondaWheelDestination(SchemeDictionaryDestination):
             raise FileExistsError(message)
         self._members.add(archive_path)
 
-        tar_info = tarfile.TarInfo(name=archive_path)
+        tar_info = tarfile.TarFile.TarInfo(name=archive_path)
         tar_info.mode = 0o775 if is_executable else 0o664
 
         with tempfile.SpooledTemporaryFile() as buffer:
@@ -99,23 +94,46 @@ class _CondaWheelDestination(SchemeDictionaryDestination):
 
         return RecordEntry(path, Hash(self.hash_algorithm, hash_), size)
 
+    def finalize_installation(
+        self,
+        scheme: Scheme,
+        record_file_path: str,
+        records: Iterable[tuple[Scheme, RecordEntry]],
+    ):
+        """Finalize installation, by writing the ``RECORD`` file.
+        Account for relpath() differences between superclass (installs to a real
+        filesystem) and _CondaWheelDestination (creates an archive). Unlike
+        superclass, doesn't compile bytecode.
+        """
+
+        def prefix_for_scheme(file_scheme: str) -> str | None:
+            if file_scheme == scheme:
+                return None
+
+            source_prefix = self.scheme_dict[file_scheme] or "."
+            target_prefix = self.scheme_dict[scheme] or "."
+            path = os.path.relpath(source_prefix, start=target_prefix)
+            return path + "/"
+
+        record_list = list(records)
+        with construct_record_file(record_list, prefix_for_scheme) as record_stream:
+            self.write_to_fs(scheme, record_file_path, record_stream, is_executable=False)
+
 
 def install_installer_to_tar(
     python_executable: str,
     whl: Path,
-    tar: TarFile,
+    tar: tarfile.TarFile,
 ) -> list[dict]:
-    # pretend we are installing to / since "" for "data" would break relpath() call.
     scheme = {
-        "purelib": "/site-packages",
-        "platlib": "/site-packages",
-        "scripts": "/bin",
-        "data": "/",
-        "headers": "/include",
+        "purelib": "site-packages",
+        "platlib": "site-packages",
+        "scripts": "bin",
+        "data": "",
+        "headers": "include",
     }
 
     destination = _CondaWheelDestination(
-        destdir="/",
         scheme_dict=scheme,
         interpreter=str(python_executable),
         script_kind="posix",
