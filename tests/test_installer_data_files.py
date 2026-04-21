@@ -4,6 +4,7 @@ Tests for installer data file handling.
 Tests that data files in wheels are properly installed.
 """
 
+import io
 import json
 import os
 import sys
@@ -12,6 +13,7 @@ from pathlib import Path
 
 import pytest
 from conda.base.context import context
+from conda.common.path import get_python_short_path
 from conda.testing.fixtures import TmpEnvFixture
 
 from conda_pypi import installer
@@ -69,24 +71,22 @@ def test_install_installer_to_tar_data_files_present(
 def test_install_installer_headers(
     tmp_env: TmpEnvFixture,
     wheel_with_headers: Path,
-    tmp_path: Path,
 ):
-    """Wheel .data/headers/ files are installed to build_path/include/."""
-    build_path = tmp_path / "build"
-    build_path.mkdir()
+    """Wheel .data/headers/ files are added to include/ in tar members."""
+    tar = tarfile.TarFile("conda.tar", "w", fileobj=io.BytesIO())
 
     with tmp_env("python=3.12") as prefix:
         python_executable = Path(prefix, get_python_short_path())
 
-        installer.install_installer(
+        installer.install_installer_to_tar(
             str(python_executable),
             wheel_with_headers,
-            build_path,
+            tar,
         )
 
-        header_file = build_path / "include" / "header_pkg" / "header_pkg.h"
-        assert header_file.exists()
-        assert header_file.read_text().startswith("// header_pkg public API")
+        member_names = {member.name for member in tar.getmembers()}
+        header_path = "include/header_pkg/header_pkg.h"
+        assert header_path in member_names
 
 
 @pytest.fixture(scope="session")
