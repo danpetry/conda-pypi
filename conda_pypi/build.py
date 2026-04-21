@@ -209,7 +209,10 @@ def build_conda(
                 _add_to_tar(tar, "info/link.json", json_dumps(link_json).encode("utf-8"))
 
             # Allow pip to list us as editable or show the path to our project.
-            # XXX leaks path
+            # XXX this includes e.g. a path to the user's checkout of their
+            # project; but if this only applies for ephemeral editable packages,
+            # as designed, the path will never be copied to another
+            # machine.
             if project_path:
                 direct_url = project_path.absolute().as_uri()
                 direct_url_bytes = json.dumps(
