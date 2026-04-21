@@ -35,9 +35,9 @@ class _CondaWheelDestination(SchemeDictionaryDestination):
     that breaks in other environments.
     """
 
-    conda_builder: tarfile.TarFile.TarFile
+    conda_builder: tarfile.TarFile
 
-    def __init__(self, *args, conda_builder: tarfile.TarFile.TarFile, **kwargs):
+    def __init__(self, *args, conda_builder: tarfile.TarFile, **kwargs):
         super().__init__(*args, **kwargs)
         self.conda_builder = conda_builder
         self.package_paths: list[dict] = []
@@ -71,7 +71,7 @@ class _CondaWheelDestination(SchemeDictionaryDestination):
             raise FileExistsError(message)
         self._members.add(archive_path)
 
-        tar_info = tarfile.TarFile.TarInfo(name=archive_path)
+        tar_info = tarfile.TarInfo(name=archive_path)
         tar_info.mode = 0o775 if is_executable else 0o664
 
         with tempfile.SpooledTemporaryFile() as buffer:
