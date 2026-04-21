@@ -129,9 +129,8 @@ def test_build_in_env(tmp_path):
         str(Path(__file__).parent / "packages" / "has-build-dep"),
     )
 
-    installed = [
-        record.name for record in PrefixData(prefix, pip_interop_enabled=True).iter_records()
-    ]
+    prefix_data = PrefixData(prefix, interoperability=True)
+    installed = [record.name for record in prefix_data.iter_records()]
 
     assert "packaging" in installed
 
