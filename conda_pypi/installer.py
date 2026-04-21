@@ -61,7 +61,9 @@ class _CondaWheelDestination(SchemeDictionaryDestination):
         In installer==1.0.0, the SchemeDirectoryDestination() superclass
         delegates all write_*() functions here.
         """
-        archive_path = os.path.join(self.scheme_dict[scheme], path)
+        # without "pretend" destdir prefix
+        self._path_with_destdir
+        archive_path = os.path.join(self.scheme_dict[scheme], path)[len(self.destdir or "") :]
         archive_path = archive_path.replace(os.sep, "/")
 
         if ".." in archive_path.split("/"):
