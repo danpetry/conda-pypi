@@ -5,7 +5,6 @@ Install a wheel / install a conda.
 from __future__ import annotations
 
 import base64
-import hashlib
 import logging
 import os
 import subprocess
@@ -60,41 +59,40 @@ class _CondaWheelDestination(SchemeDictionaryDestination):
         delegates all write_*() functions here.
         """
         archive_path = str(Path(self.scheme_dict[scheme], path).as_posix())
-        archive_path = archive_path.lstrip("/")
 
         if ".." in archive_path.split("/"):
             raise ValueError(f"Path traversal detected: {archive_path}")
-
-        if archive_path in self._members:
-            message = f"File already exists: {archive_path}"
-            raise_exists = True
-            if self.overwrite_existing:
-                # could wait to add to self._members and
-                hasher = hashlib.new("sha256")
-                hasher.update(stream.read())
-                digest = hasher.hexdigest()
-                for p in self.package_paths:
-                    if p["_path"] == archive_path:
-                        if p["sha256"] == digest:
-                            log.warning(
-                                "Wheel has overlapping paths %s with same content.", archive_path
-                            )
-                            raise_exists = False
-                message = f"{message}; overwrite_existing not available in write-to-archive."
-            if raise_exists:
-                raise FileExistsError(message)
-        self._members.add(archive_path)
 
         tar_info = tarfile.TarInfo(name=archive_path)
         tar_info.mode = 0o775 if is_executable else 0o664
 
         with tempfile.SpooledTemporaryFile() as buffer:
             hash_, size = copyfileobj_with_hashing(stream, buffer, self.hash_algorithm)
-            # XXX move overwrite existing check here
 
-            # hash_ is urlsafe-b64encode without padding
+            # hash_ is urlsafe-b64encode without padding. self.hash_algorithm is
+            # "sha256" although it is implemented to be flexible on the wheel
+            # side; but conda requires sha256.
             pad = "=" * (-len(hash_) % 4)
             hash_hex = base64.urlsafe_b64decode(hash_ + pad).hex()
+
+            # Almost never happens, OK to waste effort before error.
+            if archive_path in self._members:
+                message = f"File already exists: {archive_path}"
+                raise_exists = True
+                if self.overwrite_existing:
+                    p = next(p for p in self.package_paths if p["_path"] == archive_path)
+                    if p["sha256"] == hash_hex:
+                        log.warning(
+                            "Wheel has overlapping paths %s with same content.", archive_path
+                        )
+                        raise_exists = False
+                        message = (
+                            f"{message}; overwrite_existing not available in write-to-archive."
+                        )
+                if raise_exists or not self.overwrite_existing:
+                    raise FileExistsError(message)
+            self._members.add(archive_path)
+
             tar_info.size = size
             buffer.seek(0)
 
