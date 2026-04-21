@@ -58,7 +58,7 @@ def test_install_installer_to_tar_data_files_present(
 
     # Data files should be recorded with data scheme path (share/)
     paths = {p["_path"] for p in package_paths}
-    data_path = "share/test-package-with-data/data/test.txt"
+    data_path = "/share/test-package-with-data/data/test.txt"
     assert data_path in paths, f"Data file not found in package_paths: {paths}"
 
 
@@ -67,6 +67,7 @@ def test_install_installer_to_tar_headers(
     tmp_path: Path,
 ):
     """Wheel .data/headers/ files are recorded with include/ path."""
+    # XXX we must discard the second copy of the file?
     tar_path = tmp_path / "output.tar"
     with tarfile.open(tar_path, "w") as tar:
         package_paths = installer.install_installer_to_tar(

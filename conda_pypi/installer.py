@@ -50,8 +50,6 @@ class _CondaWheelDestination(SchemeDictionaryDestination):
         log.debug(f"Skipping script generation for {name} (handled via link.json)")
         return RecordEntry(path=name, hash_=None, size=None)
 
-    # def finalize_installation() is retained, .conda includes RECORD
-
     def write_to_fs(
         self,
         scheme: Scheme,
@@ -72,7 +70,7 @@ class _CondaWheelDestination(SchemeDictionaryDestination):
         if archive_path in self._members:
             message = f"File already exists: {archive_path}"
             if self.overwrite_existing:
-                message = "{message}; overwrite_existing not available in write-to-archive."
+                message = f"{message}; overwrite_existing not available in write-to-archive."
             raise FileExistsError(message)
         self._members.add(archive_path)
 
@@ -105,15 +103,17 @@ def install_installer_to_tar(
     whl: Path,
     tar: TarFile,
 ) -> list[dict]:
+    # pretend we are installing to / since "" for "data" would break relpath() call.
     scheme = {
-        "purelib": "site-packages",
-        "platlib": "site-packages",
-        "scripts": "bin",
-        "data": "",
-        "headers": "include",
+        "purelib": "/site-packages",
+        "platlib": "/site-packages",
+        "scripts": "/bin",
+        "data": "/",
+        "headers": "/include",
     }
 
     destination = _CondaWheelDestination(
+        destdir="/",
         scheme_dict=scheme,
         interpreter=str(python_executable),
         script_kind="posix",
