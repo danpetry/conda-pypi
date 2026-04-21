@@ -93,9 +93,11 @@ def json_dumps(object):
     return json.dumps(object, indent=2, sort_keys=True)
 
 
-def _add_to_tar(tar: tarfile.TarFile, name: str, data: bytes) -> None:
+def _add_to_tar(tar: tarfile.TarFile, name: str, data: bytes, mode: int = 0o644) -> None:
+    # 0o644 matches conda-build's convention for info/ metadata files
     tar_info = tarfile.TarInfo(name)
     tar_info.size = len(data)
+    tar_info.mode = mode
     tar.addfile(tar_info, io.BytesIO(data))
 
 
