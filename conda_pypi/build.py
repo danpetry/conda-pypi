@@ -93,7 +93,7 @@ def json_dumps(object):
     return json.dumps(object, indent=2, sort_keys=True)
 
 
-def _add_to_tar(tar, name: str, data: bytes) -> None:
+def _add_to_tar(tar: tarfile.TarFile, name: str, data: bytes) -> None:
     tar_info = tarfile.TarInfo(name)
     tar_info.size = len(data)
     tar.addfile(tar_info, io.BytesIO(data))
