@@ -72,7 +72,7 @@ class _CondaWheelDestination(SchemeDictionaryDestination):
         if archive_path in self._members:
             message = f"File already exists: {archive_path}"
             if self.overwrite_existing:
-                message = "{message} overwrite_existing not available in write-to-archive."
+                message = "{message}; overwrite_existing not available in write-to-archive."
             raise FileExistsError(message)
         self._members.add(archive_path)
 
