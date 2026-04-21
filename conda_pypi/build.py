@@ -178,6 +178,13 @@ def build_conda(
         record = metadata.package_record.to_index_json()
         file_id = f"{record['name']}-{record['version']}-{record['build']}"
 
+        # conda_builder() creates a TarFile that routes members to `.conda`'s
+        # two inner TarFile(), a pkg- or an info- SpooledTemporaryFile()
+        # depending on whether the filename matches an is_info() function
+        # default `filename.startswith("info/")`. Knowing the size before
+        # compression saves memory on decompression by allocating correct-sized
+        # buffers. The compressed data is written directly into the ZipFile()
+        # `.conda` archive.
         with conda_builder(file_id, output_path) as tar:
             package_paths = installer.install_installer_to_tar(python_executable, whl, tar)
 
